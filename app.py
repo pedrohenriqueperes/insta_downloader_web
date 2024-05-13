@@ -1,7 +1,6 @@
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_from_directory
 import instaloader
 import os
-from flask_cors import CORS
 
 app = Flask(__name__)
 
@@ -18,27 +17,41 @@ def download_post():
 
     L = instaloader.Instaloader()
 
-    session_filename = f"{username}_session"
-    # Checando se o arquivo de sessão existe
-    if os.path.exists(session_filename):
-        L.load_session_from_file(username, filename=session_filename)
-    else:
+    # Configuração e login
+    session_directory = 'sessions'
+    os.makedirs(session_directory, exist_ok=True)
+    session_filename = os.path.join(session_directory, f"{username}_session")
+    if not os.path.exists(session_filename):
         try:
             L.login(username, password)
             L.save_session_to_file(filename=session_filename)
-        except instaloader.exceptions.TwoFactorAuthRequiredError:
-            return "Autenticação de dois fatores requerida, por favor verifique seu dispositivo."
-        except instaloader.exceptions.BadCredentialsException:
-            return "Falha no login: verifique seu nome de usuário e senha."
-        except Exception as e:
-            return f"Erro ao fazer login: {str(e)}"
+        except instaloader.exceptions.InstaloaderException as e:
+            return f"Erro de autenticação: {str(e)}"
 
+    # Baixar o post
     try:
         post = instaloader.Post.from_shortcode(L.context, shortcode)
-        L.download_post(post, target=post.owner_username)
-        return redirect(url_for('index'))
+        owner_username = post.owner_username  # Guarda o nome do usuário dono do post
+        os.makedirs(owner_username, exist_ok=True)
+        L.download_post(post, target=owner_username)
     except Exception as e:
         return f"Erro ao baixar o post: {str(e)}"
+
+    # Encontrar o arquivo correto para servir
+    for file in os.listdir(owner_username):
+        if file.endswith('.jpg') or file.endswith('.mp4'):
+            return redirect(url_for('serve_file', filename=os.path.join(owner_username, file)))
+
+    return "Arquivo não encontrado"
+
+@app.route('/files/<path:filename>')
+def serve_file(filename):
+    # O diretório principal do projeto é usado diretamente
+    directory = os.getcwd()
+    try:
+        return send_from_directory(directory, filename, as_attachment=True)
+    except FileNotFoundError:
+        return "Arquivo não encontrado", 404
 
 if __name__ == '__main__':
     app.run(debug=True)
