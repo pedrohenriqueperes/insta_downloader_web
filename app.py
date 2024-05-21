@@ -53,5 +53,5 @@ def serve_file(filename):
     except FileNotFoundError:
         return "Arquivo não encontrado", 404
 
-if __name__ == '__main__':
-    app.run(debug=True)
+#if __name__ == '__main__':
+   # app.run(debug=True)
