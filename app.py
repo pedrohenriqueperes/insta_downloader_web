@@ -11,22 +11,9 @@ def index():
 @app.route('/download', methods=['POST'])
 def download_post():
     url = request.form['url']
-    username = request.form['username']
-    password = request.form['password']
     shortcode = url.split("/")[-2]
 
     L = instaloader.Instaloader()
-
-    # Configuração e login
-    session_directory = 'sessions'
-    os.makedirs(session_directory, exist_ok=True)
-    session_filename = os.path.join(session_directory, f"{username}_session")
-    if not os.path.exists(session_filename):
-        try:
-            L.login(username, password)
-            L.save_session_to_file(filename=session_filename)
-        except instaloader.exceptions.InstaloaderException as e:
-            return f"Erro de autenticação: {str(e)}"
 
     # Baixar o post
     try:
@@ -54,4 +41,4 @@ def serve_file(filename):
         return "Arquivo não encontrado", 404
 
 #if __name__ == '__main__':
-   # app.run(debug=True)
+    #app.run(debug=True)
